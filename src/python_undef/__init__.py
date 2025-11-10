@@ -194,7 +194,7 @@ def generate_python_undef_header(pyconfig_path, output_path=None):
                 print(f"  ... and {len(macros_to_undef) - 50} more")
         
         print(f"\nUsage Notes:")
-        print(f"  1. Include this file before including other library headers.")
+        print(f"  1. Include this file before including other library headers but must be after '<Python.h>'.")
         print(f"  2. Use DONOTUNDEF_XXX to protect macros that must be kept.")
         print(f"  3. Regenerate this file whenever rebuilding Python.")
         
@@ -214,6 +214,7 @@ python -m python_undef --generate
     Generate Python_undef.h based on the system's pyconfig.h.
 python -m python_undef --include
     Print the include path where Python_undef.h is located.""")
+            sys.exit(0)
         elif sys.argv[1] == '--generate': 
             include_dir = Path(sysconfig.get_path('include'))
             print(f"\n{'='*60}")
@@ -227,9 +228,11 @@ python -m python_undef --include
                 
                 if success:
                     print(f"\n✅ Generation complete!")
-                    print(f"💡 Tip: Place Python_undef.h inside Python include search path.")
+                    print(f"💡 Tip: Place Python_undef.h inside module 'python_def' include search path.")
+                    sys.exit(0)
                 else:
                     print(f"\n❌ Generation failed!")
+                    sys.exit(1)
                     
             else:
                 print(f"File {pyconfig_path} not found.")
@@ -239,14 +242,18 @@ python -m python_undef --include
                 print("\nTypical paths on Unix/Linux:")
                 print("  /usr/include/python3.x/pyconfig.h")
                 print("  /usr/local/include/python3.x/pyconfig.h")
+                sys.exit(1)
         elif sys.argv[1] == "--include":
             file_dir = os.path.dirname(os.path.abspath(__file__))
             if not Path(file_dir).exists():
                 print("File not found. Use 'python -m python_undef --generate' to generate the header first.")
-                return
+                sys.exit(1)
             include_path = os.path.abspath(os.path.join(file_dir, 'include'))
             print(include_path)
+            sys.exit(0)
         else:
             print("Unknown argument. Use --help for usage information.")
+            sys.exit(1)
     else:
         print("No arguments provided. Use --help for usage information.")
+        sys.exit(1)
