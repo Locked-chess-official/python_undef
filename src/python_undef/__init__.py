@@ -2,8 +2,9 @@ import os
 import re
 import datetime
 import sys
+from pathlib import Path
 
-def is_valid_macro_name(macro_name):
+def is_valid_macro_name(macro_name: str):
     """
     Determine whether a macro name is valid using Python's standard library methods.
     
@@ -20,7 +21,7 @@ def is_valid_macro_name(macro_name):
     # Use str.isidentifier() to check for valid identifier syntax
     return macro_name.isidentifier()
 
-def extract_macro_name(line):
+def extract_macro_name(line: str):
     """Extract the macro name from a #define line (handles spaces between # and define)."""
     line = line.strip()
 
@@ -36,7 +37,7 @@ def extract_macro_name(line):
         return candidate
     return None
 
-def is_standard_python_macro(macro_name):
+def is_standard_python_macro(macro_name: str):
     """
     Check whether a macro follows Python's standard naming conventions.
     Rules: Starts with Py, PY, _Py, _PY, or ends with _H.
@@ -44,7 +45,7 @@ def is_standard_python_macro(macro_name):
     standard_prefixes = ('Py', 'PY', '_Py', '_PY')
     return macro_name.startswith(standard_prefixes) or macro_name.endswith('_H')
 
-def generate_undef_code(macro_name):
+def generate_undef_code(macro_name: str):
     """Generate the code to undefine a macro."""
     return f"""#ifndef DONOTUNDEF_{macro_name}
 #ifdef {macro_name}
@@ -54,7 +55,7 @@ def generate_undef_code(macro_name):
 
 """
 
-def generate_python_undef_header(pyconfig_path, output_path=None):
+def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None):
     """
     Generate the Python_undef.h header file.
     
@@ -64,9 +65,14 @@ def generate_python_undef_header(pyconfig_path, output_path=None):
     """
     if output_path is None:
         file_dir = os.path.dirname(os.path.abspath(__file__))
-        output_path = f'{file_dir}/include/Python_undef.h'
-        if not os.path.exists(f'{file_dir}/include'):
-            os.makedirs(f'{file_dir}/include')
+        include_dir = Path(file_dir) / 'include'
+        output_path = str(include_dir / 'Python_undef.h')
+        if not include_dir.exists():
+            try:
+                os.makedirs(f'{file_dir}/include')
+            except Exception as e:
+                print(f"Error creating include directory: {e}")
+                return False
     
     # Read pyconfig.h
     try:
@@ -206,7 +212,6 @@ def generate_python_undef_header(pyconfig_path, output_path=None):
 
 def main():
     import sysconfig
-    from pathlib import Path
     if sys.argv[1:]:
         if sys.argv[1] in ('-h', '--help'):
             print("""Usage:
@@ -228,7 +233,7 @@ python -m python_undef --include
                 
                 if success:
                     print(f"\n✅ Generation complete!")
-                    print(f"💡 Tip: Place Python_undef.h inside module 'python_def' include search path.")
+                    print(f"💡 Tip: Use '{sys.executable} -m python_undef --include' to add this header file path to search path.")
                     sys.exit(0)
                 else:
                     print(f"\n❌ Generation failed!")
@@ -245,7 +250,7 @@ python -m python_undef --include
                 sys.exit(1)
         elif sys.argv[1] == "--include":
             file_dir = os.path.dirname(os.path.abspath(__file__))
-            if not Path(file_dir).exists():
+            if not (Path(file_dir) / "include" / "Python_undef.h").exists():
                 print("File not found. Use 'python -m python_undef --generate' to generate the header first.")
                 sys.exit(1)
             include_path = os.path.abspath(os.path.join(file_dir, 'include'))
