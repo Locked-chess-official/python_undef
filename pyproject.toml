@@ -1,0 +1,15 @@
+[build-system]
+requires = ["hatchling"] 
+build-backend = "hatchling.build"
+
+[project]
+name = "python_undef"
+version = "0.1.0"
+description = "Python undefined header in pyconfig.h"
+license = {text = "MIT"}
+authors = [
+    { name = "Locked-chess-official", email = "13140752715@163.com" }
+]
+
+[project.urls]
+homepage = "https://github.com/Locked-chess-official/python_undef"
