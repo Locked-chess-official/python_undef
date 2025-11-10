@@ -4,8 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "python_undef"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python undefined header in pyconfig.h"
+readme = "README.md"
 license = {text = "MIT"}
 authors = [
     { name = "Locked-chess-official", email = "13140752715@163.com" }
