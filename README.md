@@ -14,15 +14,23 @@ pip install python_undef
 
 ## Usage
 
-This command will create the file "Python_undef.h"
+This command under will create the file "Python_undef.h"
 
 ```bash
 python -m python_undef --generate
 ```
 
-This command will output the include path of "Python_undef.h".
+It defaults output the file "Python_undef.h" in the package directory. You can use the `--output` option to specify the output file:
+
+```bash
+python -m python_undef --generate --output <path>
+```
+
+The command under will output the include path of "Python_undef.h".
 
 You can use this command in your C/C++ project such as "cmake", "gyp" and so on.
+
+If hadn't run `python -m python_undef --generate` it will exit with code 1.
 
 ```bash
 python -m python_undef --include

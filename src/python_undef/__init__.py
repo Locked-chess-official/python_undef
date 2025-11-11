@@ -1,3 +1,17 @@
+"""
+python_undef - A utility to generate a header file that undefines non-standard Python macros in pyconfig.h.
+
+Usage:
+    python -m python_undef --generate
+    This is the main command to generate Python_undef.h based on the system's pyconfig.h to the include directly under the package directly.
+    python -m python_undef --generate --output <path>
+    This command generates Python_undef.h and saves it to the specified output path.
+    python -m python_undef --include
+    This command prints the include path where Python_undef.h is located.
+    python -m python_undef --help
+    Display this help message.
+"""
+
 import os
 import re
 import datetime
@@ -132,7 +146,7 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
  *   #define DONOTUNDEF_MACRO_NAME
  * 
  * Generation rules:
- *   - Macros starting with Py_, PY_, _Py, _PY are preserved (Python standard)
+ *   - Macros starting with Py, PY, _Py, _PY are preserved (Python standard)
  *   - Macros ending with _H are preserved (header guards)
  *   - All other macros are undefined
  *   - Macro name validation uses Python's standard identifier checking
@@ -216,7 +230,9 @@ def main():
         if sys.argv[1] in ('-h', '--help'):
             print("""Usage:
 python -m python_undef --generate
-    Generate Python_undef.h based on the system's pyconfig.h.
+    Generate Python_undef.h based on the system's pyconfig.h to the include directly under the package directly.
+python -m python_undef --generate --output <path>
+    Generate Python_undef.h and specify output path.
 python -m python_undef --include
     Print the include path where Python_undef.h is located.""")
             sys.exit(0)
@@ -229,29 +245,37 @@ python -m python_undef --include
             pyconfig_path = include_dir / "pyconfig.h"
             
             if os.path.exists(pyconfig_path):
-                success = generate_python_undef_header(pyconfig_path)
-                
+                if sys.argv[2:]:
+                    if sys.argv[2] == "--output" and len(sys.argv) == 4:
+                        if not os.path.isdir(sys.argv[3]):
+                            print("Error: Specified output path does not exist.", file=sys.stderr)
+                            sys.exit(1)
+                        output_path = str(Path(sys.argv[3]) / "Python_undef.h")
+                        print(f"Output path specified: {output_path}")
+                    else:
+                        print("Invalid output argument. Use --output <path> to specify output file.", file=sys.stderr)
+                        sys.exit(1)
+                else:
+                    output_path = None
+                success = generate_python_undef_header(pyconfig_path, output_path)
+
                 if success:
                     print(f"\n✅ Generation complete!")
-                    print(f"💡 Tip: Use '{sys.executable} -m python_undef --include' to add this header file path to search path.")
+                    if not output_path:
+                        print(f"💡 Tip: Use '{sys.executable} -m python_undef --include' to add this header file path to search path.")
                     sys.exit(0)
                 else:
                     print(f"\n❌ Generation failed!", file=sys.stderr)
                     sys.exit(1)
-                    
+
             else:
                 print(f"File {pyconfig_path} not found.", file=sys.stderr)
-                print("Please update the pyconfig_path variable to the actual pyconfig.h path.", file=sys.stderr)
-                print("\nTypical paths on Windows:", file=sys.stderr)
-                print("  C:\\\\Python3x\\\\include\\\\pyconfig.h", file=sys.stderr)
-                print("\nTypical paths on Unix/Linux:", file=sys.stderr)
-                print("  /usr/include/python3.x/pyconfig.h", file=sys.stderr)
-                print("  /usr/local/include/python3.x/pyconfig.h", file=sys.stderr)
+                print("Please ensure the python is standard installation with headers.", file=sys.stderr)
                 sys.exit(1)
         elif sys.argv[1] == "--include":
             file_dir = os.path.dirname(os.path.abspath(__file__))
             if not (Path(file_dir) / "include" / "Python_undef.h").exists():
-                print("File not found. Use 'python -m python_undef --generate' to generate the header first.", file=sys.stderr)
+                print(f"File not found. Use '{sys.executable} -m python_undef --generate' to generate the header first.", file=sys.stderr)
                 sys.exit(1)
             include_path = os.path.abspath(os.path.join(file_dir, 'include'))
             print(include_path)
