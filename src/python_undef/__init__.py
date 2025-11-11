@@ -244,7 +244,7 @@ python -m python_undef --include
                 print("Please update the pyconfig_path variable to the actual pyconfig.h path.", file=sys.stderr)
                 print("\nTypical paths on Windows:", file=sys.stderr)
                 print("  C:\\\\Python3x\\\\include\\\\pyconfig.h", file=sys.stderr)
-                print("\nTypical paths on Unix/Linux:")
+                print("\nTypical paths on Unix/Linux:", file=sys.stderr)
                 print("  /usr/include/python3.x/pyconfig.h", file=sys.stderr)
                 print("  /usr/local/include/python3.x/pyconfig.h", file=sys.stderr)
                 sys.exit(1)
