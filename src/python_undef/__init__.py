@@ -71,7 +71,7 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
             try:
                 os.makedirs(f'{file_dir}/include')
             except Exception as e:
-                print(f"Error creating include directory: {e}")
+                print(f"Error creating include directory: {e}", file=sys.stderr)
                 return False
     
     # Read pyconfig.h
@@ -79,10 +79,10 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
         with open(pyconfig_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
     except FileNotFoundError:
-        print(f"Error: File not found {pyconfig_path}")
+        print(f"Error: File not found {pyconfig_path}", file=sys.stderr)
         return False
     except Exception as e:
-        print(f"Error reading file: {e}")
+        print(f"Error reading file: {e}", file=sys.stderr)
         return False
     
     # Collect macros
@@ -207,7 +207,7 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
         return True
         
     except Exception as e:
-        print(f"Error writing file: {e}")
+        print(f"Error writing file: {e}", file=sys.stderr)
         return False
 
 def main():
@@ -236,29 +236,29 @@ python -m python_undef --include
                     print(f"💡 Tip: Use '{sys.executable} -m python_undef --include' to add this header file path to search path.")
                     sys.exit(0)
                 else:
-                    print(f"\n❌ Generation failed!")
+                    print(f"\n❌ Generation failed!", file=sys.stderr)
                     sys.exit(1)
                     
             else:
-                print(f"File {pyconfig_path} not found.")
-                print("Please update the pyconfig_path variable to the actual pyconfig.h path.")
-                print("\nTypical paths on Windows:")
-                print("  C:\\\\Python3x\\\\include\\\\pyconfig.h")
+                print(f"File {pyconfig_path} not found.", file=sys.stderr)
+                print("Please update the pyconfig_path variable to the actual pyconfig.h path.", file=sys.stderr)
+                print("\nTypical paths on Windows:", file=sys.stderr)
+                print("  C:\\\\Python3x\\\\include\\\\pyconfig.h", file=sys.stderr)
                 print("\nTypical paths on Unix/Linux:")
-                print("  /usr/include/python3.x/pyconfig.h")
-                print("  /usr/local/include/python3.x/pyconfig.h")
+                print("  /usr/include/python3.x/pyconfig.h", file=sys.stderr)
+                print("  /usr/local/include/python3.x/pyconfig.h", file=sys.stderr)
                 sys.exit(1)
         elif sys.argv[1] == "--include":
             file_dir = os.path.dirname(os.path.abspath(__file__))
             if not (Path(file_dir) / "include" / "Python_undef.h").exists():
-                print("File not found. Use 'python -m python_undef --generate' to generate the header first.")
+                print("File not found. Use 'python -m python_undef --generate' to generate the header first.", file=sys.stderr)
                 sys.exit(1)
             include_path = os.path.abspath(os.path.join(file_dir, 'include'))
             print(include_path)
             sys.exit(0)
         else:
-            print("Unknown argument. Use --help for usage information.")
+            print("Unknown argument. Use --help for usage information.", file=sys.stderr)
             sys.exit(1)
     else:
-        print("No arguments provided. Use --help for usage information.")
+        print("No arguments provided. Use --help for usage information.", file=sys.stderr)
         sys.exit(1)
