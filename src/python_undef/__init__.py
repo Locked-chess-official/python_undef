@@ -18,6 +18,13 @@ import datetime
 import sys
 from pathlib import Path
 
+MACRO_WRITELIST = [
+    "_W64",
+    "_WIN32_WINNT",
+    "WINVER",
+    "NTDDI_VERSION"
+]
+
 def is_valid_macro_name(macro_name: str):
     """
     Determine whether a macro name is valid using Python's standard library methods.
@@ -31,7 +38,7 @@ def is_valid_macro_name(macro_name: str):
     # Empty string is invalid
     if not macro_name:
         return False
-    
+
     # Use str.isidentifier() to check for valid identifier syntax
     return macro_name.isidentifier()
 
@@ -43,9 +50,9 @@ def extract_macro_name(line: str):
     match = re.match(r'^#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)', line)
     if not match:
         return None
-    
+
     candidate = match.group(1)
-    
+
     # Validate with standard identifier rules
     if candidate and is_valid_macro_name(candidate):
         return candidate
@@ -57,7 +64,7 @@ def is_standard_python_macro(macro_name: str):
     Rules: Starts with Py, PY, _Py, _PY, or ends with _H.
     """
     standard_prefixes = ('Py', 'PY', '_Py', '_PY')
-    return macro_name.startswith(standard_prefixes) or macro_name.endswith('_H')
+    return macro_name.startswith(standard_prefixes) or macro_name.endswith('_H') or macro_name in MACRO_WRITELIST
 
 def generate_undef_code(macro_name: str):
     """Generate the code to undefine a macro."""
@@ -87,7 +94,7 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
             except Exception as e:
                 print(f"Error creating include directory: {e}", file=sys.stderr)
                 return False
-    
+
     # Read pyconfig.h
     try:
         with open(pyconfig_path, 'r', encoding='utf-8') as f:
@@ -98,19 +105,19 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
     except Exception as e:
         print(f"Error reading file: {e}", file=sys.stderr)
         return False
-    
+
     # Collect macros
     macros_to_undef = []
     all_macros = []
     invalid_macros = []
-    
+
     print("Analyzing pyconfig.h...")
-    
+
     for i, line in enumerate(lines, 1):
         macro_name = extract_macro_name(line)
         if macro_name:
             all_macros.append(macro_name)
-            
+
             # New rule: any macro not starting with Py/PY/_Py/_PY and not ending with _H is considered non-standard
             if not is_standard_python_macro(macro_name):
                 macros_to_undef.append(macro_name)
@@ -124,10 +131,10 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
                     candidate = m.group(1)
                     if candidate and not is_valid_macro_name(candidate):
                         invalid_macros.append((i, candidate))
-    
+
     # Deduplicate and sort
     macros_to_undef = sorted(set(macros_to_undef))
-    
+
     # Header section
     header = f"""/*
  * Python_undef.h - Automatically generated macro undefinition header
@@ -173,23 +180,23 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
  */
 
 """
-    
+
     # Generate undef code sections
     undef_sections = []
     for macro_name in macros_to_undef:
         undef_sections.append(generate_undef_code(macro_name))
-    
+
     # Footer
     footer = """#endif /* PYTHON_UNDEF_H */
 """
-    
+
     # Write output
     try:
         with open(output_path, 'w', encoding='utf-8', newline='\n') as f:
             f.write(header)
             f.writelines(undef_sections)
             f.write(footer)
-        
+
         print(f"\n{'='*60}")
         print(f"Successfully generated: {output_path}")
         print(f"{'='*60}")
@@ -198,21 +205,21 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
         print(f"  - Macros to undefine: {len(macros_to_undef)}")
         print(f"  - Preserved standard macros: {len(all_macros) - len(macros_to_undef)}")
         print(f"  - Invalid macro names skipped: {len(invalid_macros)}")
-        
+
         if invalid_macros:
             print(f"\nSkipped invalid macro names:")
             for line_num, invalid_macro in invalid_macros[:10]:  # show only first 10
                 print(f"  Line {line_num:4d}: '{invalid_macro}'")
             if len(invalid_macros) > 10:
                 print(f"  ... and {len(invalid_macros) - 10} more")
-        
+
         if macros_to_undef:
             print(f"\nMacros to undefine (first 50):")
             for i, macro in enumerate(macros_to_undef[:50], 1):
                 print(f"  {i:3d}. {macro}")
             if len(macros_to_undef) > 50:
                 print(f"  ... and {len(macros_to_undef) - 50} more")
-        
+
         print(f"\nUsage Notes:")
         print(f"  1. Include this file before including other library headers but must be after '<Python.h>'.")
         print(f"  2. Use DONOTUNDEF_XXX to protect macros that must be kept.")
@@ -241,9 +248,9 @@ python -m python_undef --include
             print(f"\n{'='*60}")
             print("Note: Python keywords are not excluded since they are valid macro names in C/C++.")
             print(f"{'='*60}")
-            
+
             pyconfig_path = include_dir / "pyconfig.h"
-            
+
             if os.path.exists(pyconfig_path):
                 if sys.argv[2:]:
                     if sys.argv[2] == "--output" and len(sys.argv) == 4:
@@ -261,7 +268,7 @@ python -m python_undef --include
 
                 if success:
                     print(f"\n✅ Generation complete!")
-                    if not output_path:
+                    if output_path is None:
                         print(f"💡 Tip: Use '{sys.executable} -m python_undef --include' to add this header file path to search path.")
                     sys.exit(0)
                 else:
