@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "python_undef"
-version = "0.1.5"
+version = "0.1.6"
 description = "Python undefined header in pyconfig.h"
 readme = "README.md"
 license = {text = "MIT"}
