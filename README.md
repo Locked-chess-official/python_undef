@@ -14,19 +14,24 @@ pip install python_undef
 
 ## Usage
 
+### Generate
+
 This command under will create the file "Python_undef.h"
 
 ```bash
 python -m python_undef --generate
 ```
 
-It defaults output the file "Python_undef.h" in the package directory. You can use the `--output` option to specify the output file:
+It defaults output the file "Python_undef.h" and "Python_keep.h" in the package directory.
+You can use the `--output` option to specify the output file:
 
 ```bash
 python -m python_undef --generate --output <path>
 ```
 
-The command under will output the include path of "Python_undef.h".
+### Include
+
+The command under will output the include path of "Python_undef.h" and "Python_keep.h":.
 
 You can use this command in your C/C++ project such as "cmake", "gyp" and so on.
 
@@ -36,9 +41,12 @@ If hadn't run `python -m python_undef --generate` it will exit with code 1.
 python -m python_undef --include
 ```
 
+### Using it in your code
+
 You can include the "Python_undef.h" file in your project:
 
 ```c
+#include <Python_keep.h>
 #include <Python.h>
 #include <Python_undef.h>
 #include <other_header.h>
