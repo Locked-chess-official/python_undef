@@ -10,6 +10,23 @@ Usage:
     This command prints the include path where Python_undef.h is located.
     python -m python_undef --help
     Display this help message.
+
+    You can also generate your project to shield the macros from your project's config.h:
+    ```python
+    import python_undef
+    if python_undef.generate_python_undef_header(
+        "path/to/your/project/config.h",
+        output_path="path/to/your/project/include",
+        project_name="MyProject",
+        main_header_macro="MYPROJECT_H",
+        main_header_name="myproject.h",
+        macro_need_header="MYPROJECT",
+        nonstandare_macro_rule=your_function
+    ):
+        print("good")
+    else:
+        print("bad")
+    ```
 """
 
 import os
@@ -65,25 +82,25 @@ def is_standard_python_macro(macro_name: str):
     standard_prefixes = ('Py', 'PY', '_Py', '_PY')
     return macro_name.startswith(standard_prefixes) or macro_name in MACRO_WRITELIST
 
-def generate_undef_code(macro_name: str):
+def generate_undef_code(macro_name: str, macro_need_header: str="Py"):
     """Generate the code to undefine a macro."""
     return f"""#ifndef DONOTUNDEF_{macro_name}
 #ifdef {macro_name}
 #undef {macro_name}
-#ifdef _Py_FORWARD_DEFINE_{macro_name}
-#undef _Py_FORWARD_DEFINE_{macro_name}
-#pragma pop_macro("{macro_name}")
 #endif
+#ifdef _{macro_need_header}_FORWARD_DEFINE_{macro_name}
+#undef _{macro_need_header}_FORWARD_DEFINE_{macro_name}
+#pragma pop_macro("{macro_name}")
 #endif
 #endif
 
 """
 
-def generate_keep_code(macro_name: str):
+def generate_keep_code(macro_name: str, macro_need_header: str="Py"):
     """Generate the code to keep a macro."""
     return f"""#ifndef DONOTUNDEF_{macro_name}
 #ifdef {macro_name}
-#define _Py_FORWARD_DEFINE_{macro_name}
+#define _{macro_need_header}_FORWARD_DEFINE_{macro_name}
 #pragma push_macro("{macro_name}")
 #undef {macro_name}
 #endif
@@ -91,19 +108,26 @@ def generate_keep_code(macro_name: str):
 
 """
 
-def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None):
+def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=None, project_name="Python",
+                                 main_header_macro="Py_PYTHON_H", main_header_name="Python.h", macro_need_header="Py",
+                                 nonstandare_macro_rule=is_standard_python_macro):
     """
-    Generate the Python_undef.h header file.
+    Generate the keep and undef header files based on your config.h.
     
     Args:
-        pyconfig_path: Path to pyconfig.h
-        output_path: Output file path, defaults to Python_undef.h in the current directory.
+        pyconfig_path: Path to your config.h file.
+        output_path: Output file path, defaults to undef and keep header in the current directory.
+        project_name: The name of the project, defaults to "Python".
+        main_header_macro: The macro that defines the main header, defaults to "Py_PYTHON_H".
+        main_header_name: The name of the main header file, defaults to "Python.h".
+        macro_need_header: The macro that defines the header that needs to be included, defaults to "Py".
+        nonstandare_macro_rule: A function that determines whether a macro is non-standard, defaults to is_standard_python_macro.
     """
     if output_path is None:
         file_dir = os.path.dirname(os.path.abspath(__file__))
         include_dir = Path(file_dir) / 'include'
-        undef_output_path = str(include_dir / 'Python_undef.h')
-        keep_output_path = str(include_dir / 'Python_keep.h')
+        undef_output_path = str(include_dir / f'{project_name}_undef.h')
+        keep_output_path = str(include_dir / f'{project_name}_keep.h')
         if not include_dir.exists():
             try:
                 os.makedirs(f'{file_dir}/include')
@@ -115,8 +139,8 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
             print(f"Error: Output path '{output_path}' is not a directory.", file=sys.stderr)
             return False
         include_dir = Path(output_path)
-        undef_output_path = str(include_dir / 'Python_undef.h')
-        keep_output_path = str(include_dir / 'Python_keep.h')
+        undef_output_path = str(include_dir / f'{project_name}_undef.h')
+        keep_output_path = str(include_dir / f'{project_name}_keep.h')
 
     # Read pyconfig.h
     try:
@@ -134,7 +158,8 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
     all_macros = []
     invalid_macros = []
 
-    print("Analyzing pyconfig.h...")
+    filename = os.path.basename(pyconfig_path)
+    print(f"Analyzing {filename}...")
 
     for i, line in enumerate(lines, 1):
         macro_name = extract_macro_name(line)
@@ -142,7 +167,7 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
             all_macros.append(macro_name)
 
             # New rule: any macro not starting with Py/PY/_Py/_PY and not ending with _H is considered non-standard
-            if not is_standard_python_macro(macro_name):
+            if not nonstandare_macro_rule(macro_name):
                 macros_to_undef.append(macro_name)
                 print(f"Line {i:4d}: Found non-standard macro '{macro_name}'")
         else:
@@ -161,27 +186,22 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
     # Header section
     undef_header = f"""/*
  * Python_undef.h - Automatically generated macro undefinition header
- * 
+ *
  * This file is automatically generated from {os.path.basename(pyconfig_path)}
  * Contains macros that may need to be undefined to avoid conflicts with other libraries.
- * 
+ *
  * WARNING: This is an automatically generated file. Do not edit manually.
- * 
+ *
  * Usage:
- *   #include <Python_keep.h>
- *   #include <Python.h>
- *   #include <Python_undef.h>
+ *   #include <{project_name}_keep.h>
+ *   #include <{main_header_name}>
+ *   #include <{project_name}_undef.h>
  *   #include <other_library_headers.h>
- * 
+ *
  * To preserve specific macros, define before including this header:
  *   #define DONOTUNDEF_MACRO_NAME
- * 
- * Generation rules:
- *   - Macros starting with Py, PY, _Py, _PY are preserved (Python standard)
- *   - Macros ending with _H are preserved (header guards)
- *   - All other macros are undefined
- *   - Macro name validation uses Python's standard identifier checking
- * 
+ *
+ *
  * Generated from: {os.path.abspath(pyconfig_path)}
  * Generated at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
  * Total valid macros found: {len(all_macros)}
@@ -189,19 +209,12 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
  * Invalid macro names skipped: {len(invalid_macros)}
  */
 
-#ifndef PYTHON_UNDEF_H
-#define PYTHON_UNDEF_H
+#ifndef {project_name.upper()}_UNDEF_H
+#define {project_name.upper()}_UNDEF_H
 
-#ifndef Py_PYTHON_H
-#  error "Python_undef.h must be included *after* Python.h"
+#ifndef {main_header_macro}
+#  error "{project_name}_undef.h must be included *after* {main_header_name}"
 #endif
-
-/*
- * Platform Note:
- * - The COMPILER macro is primarily defined in pyconfig.h on Windows
- * - Other platforms define compiler info in Python/getcompiler.c
- * - This macro and others can conflict with libraries such as V8
- */
 
 """
 
@@ -214,9 +227,9 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
  * WARNING: This is an automatically generated file. Do not edit manually.
  *
  * Usage:
- *   #include <Python_keep.h>
- *   #include <Python.h>
- *   #include <Python_undef.h>
+ *   #include <{project_name}_keep.h>
+ *   #include <{main_header_name}>
+ *   #include <{project_name}_undef.h>
  *   #include <other_library_headers.h>
  *
  * To preserve specific macros, define before including this header:
@@ -228,11 +241,11 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
  * Macros to keep: {len(all_macros) - len(macros_to_undef)}
  */
 
-#ifndef PYTHON_KEEP_H
-#define PYTHON_KEEP_H
+#ifndef {project_name.upper()}_KEEP_H
+#define {project_name.upper()}_KEEP_H
 
-#ifdef Py_PYTHON_H
-#error "Python_keep.h must be included *before* Python.h"
+#ifdef {main_header_macro}
+#error "{project_name}_keep.h must be included *before* {main_header_name}"
 #endif
 
 """
@@ -241,14 +254,14 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
     undef_sections = []
     keep_selection = []
     for macro_name in macros_to_undef:
-        undef_sections.append(generate_undef_code(macro_name))
-        keep_selection.append(generate_keep_code(macro_name))
+        undef_sections.append(generate_undef_code(macro_name, macro_need_header))
+        keep_selection.append(generate_keep_code(macro_name, macro_need_header))
 
     # Footer
-    undef_footer = """#endif /* PYTHON_UNDEF_H */
+    undef_footer = f"""#endif /* {project_name.upper()}_UNDEF_H */
 """
 
-    keep_footer = """#endif /* PYTHON_KEEP_H */
+    keep_footer = f"""#endif /* {project_name.upper()}_KEEP_H */
 """
 
     # Write output
@@ -263,7 +276,7 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
             f.write(keep_footer)
 
         print(f"\n{'='*60}")
-        print(f"Successfully generated: {undef_output_path} and {keep_output_path}")
+        print(f"Successfully generated: '{os.path.basename(undef_output_path)}' and '{os.path.basename(keep_output_path)}'")
         print(f"{'='*60}")
         print("Summary:")
         print(f"  - Total valid macro definitions: {len(all_macros)}")
@@ -287,13 +300,12 @@ def generate_python_undef_header(pyconfig_path: str, output_path: str|None=None)
 
         print(f"\nUsage Notes:")
         print(
-        f"  1. Include file \"Python_undef.h\" and \"Python_keep.h\" before including other library headers, "
-        "but \"Python_undef.h\" must be after '<Python.h>'.")
-        print(f"  2. Use DONOTUNDEF_XXX to protect macros that must be kept its defination in \"Python.h\".")
-        print(f"  3. Regenerate this file whenever rebuilding Python.")
-        
+        f"  1. Include file \"{project_name}_undef.h\" and \"{project_name}_keep.h\" before including other library headers, "
+        f"but \"{project_name}_undef.h\" must be after '<{main_header_name}>'.")
+        print(f"  2. Use DONOTUNDEF_XXX to protect macros that must be kept its defination in \"{main_header_name}\".")
+        print(f"  3. Regenerate this file whenever rebuilding {project_name}.")
+
         return True
-        
     except Exception as e:
         print(f"Error writing file: {e}", file=sys.stderr)
         return False

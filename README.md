@@ -56,6 +56,26 @@ The "pyconfig.h" continue many macros that doesn't math the rule that "should st
 
 If you want to save the macro, use `#define DONOTUNDEF_macro_name` before include "Python_undef.h" to keep it.
 
+### Generate for your project config.h (Add in version 1.1.0)
+
+You can use this python code to generate it:
+
+```python
+import python_undef
+if python_undef.generate_python_undef_header(
+    "path_to_your_project_config.h",
+    output_path="path/to/your/project/include",
+    project_name="your_project",
+    main_header_macro="YOUR_PROJECT_H",
+    main_header_name="your_project.h",
+    macro_need_header="YOUR_PROJECT",
+    nonstandare_macro_rule=your_function
+):
+    print("Generate your_project_undef.h and your_project_keep.h success")
+else:
+    print("Generate your_project_undef.h and your_project_keep.h failed")
+```
+
 ## License
 
 MIT License
