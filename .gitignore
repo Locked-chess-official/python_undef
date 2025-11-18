@@ -7,3 +7,5 @@ include/*
 .idea/*
 uv.lock
 .venv/*
+*_keep.h
+*_undef.h
