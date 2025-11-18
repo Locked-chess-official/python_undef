@@ -69,7 +69,7 @@ if python_undef.generate_python_undef_header(
     main_header_macro="YOUR_PROJECT_H",
     main_header_name="your_project.h",
     macro_need_header="YOUR_PROJECT",
-    nonstandare_macro_rule=your_function,
+    nonstandard_macro_rule=your_function,
     inside_project=True # Add in version 1.2.0
 ):
     print("Generate your_project_undef.h and your_project_keep.h success")

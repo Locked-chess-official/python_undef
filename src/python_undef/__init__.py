@@ -21,7 +21,7 @@ Usage:
         main_header_macro="MYPROJECT_H",
         main_header_name="myproject.h",
         macro_need_header="MYPROJECT",
-        nonstandare_macro_rule=your_function
+        nonstandard_macro_rule=your_function
     ):
         print("good")
     else:
@@ -36,7 +36,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-MACRO_WRITELIST = [
+MACRO_WHITELIST = [
     "_W64",
     "_CRT_NONSTDC_NO_DEPRECATE",
     "_CRT_SECURE_NO_DEPRECATE"
@@ -81,7 +81,7 @@ def is_standard_python_macro(macro_name: str):
     Rules: Starts with Py, PY, _Py, _PY
     """
     standard_prefixes = ('Py', 'PY', '_Py', '_PY')
-    return macro_name.startswith(standard_prefixes) or macro_name in MACRO_WRITELIST
+    return macro_name.startswith(standard_prefixes) or macro_name in MACRO_WHITELIST
 
 def generate_undef_code(macro_name: str, macro_need_header: str="Py"):
     """Generate the code to undefine a macro."""
@@ -111,7 +111,7 @@ def generate_keep_code(macro_name: str, macro_need_header: str="Py"):
 
 def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=None, project_name: str="Python",
                                  main_header_macro: str="Py_PYTHON_H", main_header_name: str="Python.h", macro_need_header: str="Py",
-                                 nonstandare_macro_rule: Callable[[str], bool]=is_standard_python_macro, inside_project: bool=False):
+                                 nonstandard_macro_rule: Callable[[str], bool]=is_standard_python_macro, inside_project: bool=False):
     """
     Generate the keep and undef header files based on your config.h.
     
@@ -122,7 +122,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
         main_header_macro: The macro that defines the main header, defaults to "Py_PYTHON_H".
         main_header_name: The name of the main header file, defaults to "Python.h".
         macro_need_header: The macro that defines the header that needs to be included, defaults to "Py".
-        nonstandare_macro_rule: A function that determines whether a macro is non-standard, defaults to is_standard_python_macro.
+        nonstandard_macro_rule: A function that determines whether a macro is non-standard, defaults to is_standard_python_macro.
         inside_project: Whether the code is inside the project, defaults to False.
     """
     if output_path is None:
@@ -169,11 +169,11 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
             all_macros.append(macro_name)
 
             # New rule: any macro not starting with Py/PY/_Py/_PY and not ending with _H is considered non-standard
-            if not nonstandare_macro_rule(macro_name):
+            if not nonstandard_macro_rule(macro_name):
                 macros_to_undef.append(macro_name)
                 print(f"Line {i:4d}: Found non-standard macro '{macro_name}'")
         else:
-            # Check if line looks like a define but has invalid name
+            # Check if line looks like a definition but has invalid name
             line = line.strip()
             if line.startswith('#'):
                 m = re.match(r'^#\s*define\s+(\S+)', line)
@@ -219,7 +219,6 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
 #ifndef {main_header_macro}
 #  error "{project_name}_undef.h must be included *after* {main_header_name}"
 #endif
-
 ''' if not inside_project else ""}
 """
 
@@ -254,7 +253,6 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
 #ifdef {main_header_macro}
 #error "{project_name}_keep.h must be included *before* {main_header_name}"
 #endif
-
 ''' if not inside_project else ""}
 """
 
@@ -317,7 +315,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
                 f"\"{project_name}_undef.h\" after including the other your project headers file."
             )
         )
-        print(f"  2. Use DONOTUNDEF_XXX to protect macros that must be kept its defination in \"{main_header_name}\".")
+        print(f"  2. Use DONOTUNDEF_XXX to protect macros that must be kept its definition in \"{main_header_name}\".")
         print(f"  3. Regenerate this file whenever rebuilding {project_name}.")
 
         return True
@@ -358,7 +356,7 @@ python -m python_undef --include
                         sys.exit(1)
                 else:
                     output_path = None
-                success = generate_python_undef_header(pyconfig_path, output_path)
+                success = generate_python_undef_header(str(pyconfig_path), output_path)
 
                 if success:
                     print(f"\n✅ Generation complete!")
