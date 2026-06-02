@@ -9,3 +9,4 @@ uv.lock
 .venv/*
 *_keep.h
 *_undef.h
+.vs
