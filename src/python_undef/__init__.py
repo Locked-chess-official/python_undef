@@ -335,7 +335,7 @@ python -m python_undef --generate --output <path>
 python -m python_undef --include
     Print the include path where Python_undef.h is located.""")
             sys.exit(0)
-        elif sys.argv[1] == '--generate': 
+        elif sys.argv[1] in ('--generate', "-g"): 
             include_dir = Path(sysconfig.get_path('include'))
             print(f"\n{'='*60}")
             print("Note: Python keywords are not excluded since they are valid macro names in C/C++.")
@@ -371,7 +371,7 @@ python -m python_undef --include
                 print(f"File {pyconfig_path} not found.", file=sys.stderr)
                 print("Please ensure the python is standard installation with headers.", file=sys.stderr)
                 sys.exit(1)
-        elif sys.argv[1] == "--include":
+        elif sys.argv[1] in ("--include", "-i", "-I"):
             file_dir = os.path.dirname(os.path.abspath(__file__))
             if not (Path(file_dir) / "include" / "Python_undef.h").exists():
                 print(f"File not found. Use '{sys.executable} -m python_undef --generate' to generate the header first.", file=sys.stderr)
