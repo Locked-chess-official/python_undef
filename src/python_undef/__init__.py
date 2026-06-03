@@ -93,7 +93,7 @@ def generate_undef_code(macro_name: str, macro_need_header: str="Py"):
 #undef _{macro_need_header}_FORWARD_DEFINE_{macro_name}
 #pragma pop_macro("{macro_name}")
 #endif
-#endif
+#endif /* DONOTUNDEF_{macro_name} */
 
 """
 
@@ -105,7 +105,7 @@ def generate_keep_code(macro_name: str, macro_need_header: str="Py"):
 #pragma push_macro("{macro_name}")
 #undef {macro_name}
 #endif
-#endif
+#endif /* DONOTUNDEF_{macro_name} */
 
 """
 
@@ -240,7 +240,8 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
  * Generated from: {os.path.abspath(pyconfig_path)}
  * Generated at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
  * Total valid macros found: {len(all_macros)}
- * Macros to keep: {len(all_macros) - len(macros_to_undef)}
+ * Macros to keep: {len(macros_to_undef)}
+ * Invalid macro names skipped: {len(invalid_macros)}
  *
  * Tool: python_undef
  */
@@ -335,10 +336,6 @@ python -m python_undef --include
             sys.exit(0)
         elif sys.argv[1] in ('--generate', "-g"): 
             include_dir = Path(sysconfig.get_path('include'))
-            print(f"\n{'='*60}")
-            print("Note: Python keywords are not excluded since they are valid macro names in C/C++.")
-            print(f"{'='*60}")
-
             pyconfig_path = include_dir / "pyconfig.h"
 
             if os.path.exists(pyconfig_path):
