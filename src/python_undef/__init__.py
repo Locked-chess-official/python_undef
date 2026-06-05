@@ -45,10 +45,10 @@ _MACRO_WHITELIST = [
 def is_valid_macro_name(macro_name: str):
     """
     Determine whether a macro name is valid using Python's standard library methods.
-    
+
     Args:
         macro_name: The macro name to check.
-        
+
     Returns:
         bool: True if it's a valid Python identifier, False otherwise.
     """
@@ -114,7 +114,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
                                  is_standard_macro_rule: Callable[[str], bool]=is_standard_python_macro, inside_project: bool=False):
     """
     Generate the keep and undef header files based on your config.h.
-    
+
     Args:
         pyconfig_path: Path to your config.h file.
         output_path: Output file path, defaults to undef and keep header in the current directory.
@@ -250,7 +250,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
 #define {project_name.upper()}_KEEP_H
 {f'''
 #ifdef {main_header_macro}
-#error "{project_name}_keep.h must be included *before* {main_header_name}"
+#  error "{project_name}_keep.h must be included *before* {main_header_name}"
 #endif
 ''' if not inside_project else ""}
 """
@@ -308,7 +308,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
             (
                 f"  1. Include file \"{project_name}_undef.h\" and \"{project_name}_keep.h\" before including other library headers"
                 f", but \"{project_name}_undef.h\" must be after '<{main_header_name}>'."
-            ) if not inside_project else 
+            ) if not inside_project else
             (
                 f"  1. Include file \"{project_name}_keep.h\" before including \"{os.path.basename(pyconfig_path)}\" and "
                 f"\"{project_name}_undef.h\" after including the other your project headers file."
@@ -334,7 +334,7 @@ python -m python_undef --generate --output <path>
 python -m python_undef --include
     Print the include path where Python_undef.h is located.""")
             sys.exit(0)
-        elif sys.argv[1] in ('--generate', "-g"): 
+        elif sys.argv[1] in ('--generate', "-g"):
             include_dir = Path(sysconfig.get_path('include'))
             pyconfig_path = include_dir / "pyconfig.h"
 
