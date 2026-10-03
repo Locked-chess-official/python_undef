@@ -12,5 +12,7 @@ authors = [
     { name = "Locked-chess-official", email = "13140752715@163.com" }
 ]
 
+requires-python = ">=3.6"
+
 [project.urls]
 homepage = "https://github.com/Locked-chess-official/python_undef"
