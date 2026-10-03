@@ -42,7 +42,7 @@ _MACRO_WHITELIST = [
     "_CRT_SECURE_NO_DEPRECATE"
 ]
 
-def is_valid_macro_name(macro_name: str):
+def _is_valid_macro_name(macro_name: str):
     """
     Determine whether a macro name is valid using Python's standard library methods.
 
@@ -59,7 +59,7 @@ def is_valid_macro_name(macro_name: str):
     # Use str.isidentifier() to check for valid identifier syntax
     return macro_name.isidentifier()
 
-def extract_macro_name(line: str):
+def _extract_macro_name(line: str):
     """Extract the macro name from a #define line (handles spaces between # and define)."""
     line = line.strip()
 
@@ -71,11 +71,11 @@ def extract_macro_name(line: str):
     candidate = match.group(1)
 
     # Validate with standard identifier rules
-    if candidate and is_valid_macro_name(candidate):
+    if candidate and _is_valid_macro_name(candidate):
         return candidate
     return None
 
-def is_standard_python_macro(macro_name: str):
+def _is_standard_python_macro(macro_name: str):
     """
     Check whether a macro follows Python's standard naming conventions.
     Rules: Starts with Py, PY, _Py, _PY
@@ -83,35 +83,35 @@ def is_standard_python_macro(macro_name: str):
     standard_prefixes = ('Py', 'PY', '_Py', '_PY')
     return macro_name.startswith(standard_prefixes) or macro_name in _MACRO_WHITELIST
 
-def generate_undef_code(macro_name: str, macro_need_header: str="Py"):
+def _generate_undef_code(macro_name: str, macro_need_header: str="Py"):
     """Generate the code to undefine a macro."""
-    return f"""#ifndef DONOTUNDEF_{macro_name}
+    return f"""#ifndef {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_{macro_name}
 #ifdef {macro_name}
 #undef {macro_name}
 #endif
-#ifdef _{macro_need_header}_FORWARD_DEFINE_{macro_name}
-#undef _{macro_need_header}_FORWARD_DEFINE_{macro_name}
+#ifdef _{macro_need_header + "_" if macro_need_header else ""}FORWARD_DEFINE_{macro_name}
+#undef _{macro_need_header + "_" if macro_need_header else ""}FORWARD_DEFINE_{macro_name}
 #pragma pop_macro("{macro_name}")
 #endif
-#endif /* DONOTUNDEF_{macro_name} */
+#endif /* {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_{macro_name} */
 
 """
 
-def generate_keep_code(macro_name: str, macro_need_header: str="Py"):
+def _generate_keep_code(macro_name: str, macro_need_header: str="Py"):
     """Generate the code to keep a macro."""
-    return f"""#ifndef DONOTUNDEF_{macro_name}
+    return f"""#ifndef {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_{macro_name}
 #ifdef {macro_name}
-#define _{macro_need_header}_FORWARD_DEFINE_{macro_name}
+#define _{macro_need_header + "_" if macro_need_header else ""}FORWARD_DEFINE_{macro_name}
 #pragma push_macro("{macro_name}")
 #undef {macro_name}
 #endif
-#endif /* DONOTUNDEF_{macro_name} */
+#endif /* {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_{macro_name} */
 
 """
 
 def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=None, project_name: str="Python",
                                  main_header_macro: str="Py_PYTHON_H", main_header_name: str="Python.h", macro_need_header: str="Py",
-                                 is_standard_macro_rule: Callable[[str], bool]=is_standard_python_macro, inside_project: bool=False):
+                                 is_standard_macro_rule: Callable[[str], bool]=_is_standard_python_macro, inside_project: bool=False):
     """
     Generate the keep and undef header files based on your config.h.
 
@@ -164,7 +164,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
     print(f"Analyzing {filename}...")
 
     for i, line in enumerate(lines, 1):
-        macro_name = extract_macro_name(line)
+        macro_name = _extract_macro_name(line)
         if macro_name:
             all_macros.append(macro_name)
 
@@ -178,7 +178,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
                 m = re.match(r'^#\s*define\s+(\S+)', line)
                 if m:
                     candidate = m.group(1)
-                    if candidate and not is_valid_macro_name(candidate):
+                    if candidate and not _is_valid_macro_name(candidate):
                         invalid_macros.append((i, candidate))
 
     # Deduplicate and sort
@@ -200,7 +200,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
  *   #include <other_library_headers.h>
  *''' if not inside_project else " *"}
  * To preserve specific macros, define before including this header:
- *   #define DONOTUNDEF_MACRO_NAME
+ *   #define {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_MACRO_NAME
  *
  * Generated from: {os.path.abspath(pyconfig_path)}
  * Generated at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -211,8 +211,8 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
  * Tool: python_undef
  */
 
-#ifndef {project_name.upper()}_UNDEF_H
-#define {project_name.upper()}_UNDEF_H
+#ifndef {macro_need_header + "_" if macro_need_header else ""}{project_name.upper()}_UNDEF_H
+#define {macro_need_header + "_" if macro_need_header else ""}{project_name.upper()}_UNDEF_H
 {f'''
 #ifndef {main_header_macro}
 #  error "{project_name}_undef.h must be included *after* {main_header_name}"
@@ -235,7 +235,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
  *   #include <other_library_headers.h>
  *''' if not inside_project else " *"}
  * To preserve specific macros, define before including this header:
- *   #define DONOTUNDEF_MACRO_NAME
+ *   #define {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_MACRO_NAME
  *
  * Generated from: {os.path.abspath(pyconfig_path)}
  * Generated at: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
@@ -246,8 +246,8 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
  * Tool: python_undef
  */
 
-#ifndef {project_name.upper()}_KEEP_H
-#define {project_name.upper()}_KEEP_H
+#ifndef {macro_need_header + "_" if macro_need_header else ""}{project_name.upper()}_KEEP_H
+#define {macro_need_header + "_" if macro_need_header else ""}{project_name.upper()}_KEEP_H
 {f'''
 #ifdef {main_header_macro}
 #  error "{project_name}_keep.h must be included *before* {main_header_name}"
@@ -259,14 +259,14 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
     undef_sections = []
     keep_selection = []
     for macro_name in macros_to_undef:
-        undef_sections.append(generate_undef_code(macro_name, macro_need_header))
-        keep_selection.append(generate_keep_code(macro_name, macro_need_header))
+        undef_sections.append(_generate_undef_code(macro_name, macro_need_header))
+        keep_selection.append(_generate_keep_code(macro_name, macro_need_header))
 
     # Footer
-    undef_footer = f"""#endif /* {project_name.upper()}_UNDEF_H */
+    undef_footer = f"""#endif /* {macro_need_header + "_" if macro_need_header else ""}{project_name.upper()}_UNDEF_H */
 """
 
-    keep_footer = f"""#endif /* {project_name.upper()}_KEEP_H */
+    keep_footer = f"""#endif /* {macro_need_header + "_" if macro_need_header else ""}{project_name.upper()}_KEEP_H */
 """
 
     # Write output
@@ -310,11 +310,11 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
                 f", but \"{project_name}_undef.h\" must be after '<{main_header_name}>'."
             ) if not inside_project else
             (
-                f"  1. Include file \"{project_name}_keep.h\" before including \"{os.path.basename(pyconfig_path)}\" and "
-                f"\"{project_name}_undef.h\" after including the other your project headers file."
+                f"  1. Include file \"{project_name}_keep.h\" just in \"{main_header_name}\" (just after define \"{main_header_macro}\") and "
+                f"\"{project_name}_undef.h\" after including the other your project headers file (before the endif of \"{main_header_macro}\")."
             )
         )
-        print(f"  2. Use DONOTUNDEF_XXX to protect macros that must be kept its definition in \"{main_header_name}\".")
+        print(f"  2. Use {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_XXX to protect macros that must be kept its definition in \"{main_header_name}\".")
         print(f"  3. Regenerate this file whenever rebuilding {project_name}.")
 
         return True
@@ -380,3 +380,6 @@ python -m python_undef --include
     else:
         print("No arguments provided. Use --help for usage information.", file=sys.stderr)
         sys.exit(1)
+
+if __name__ == "__main__":
+    main()

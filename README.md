@@ -54,7 +54,8 @@ You can include the "Python_undef.h" file in your project:
 
 The "pyconfig.h" continue many macros that doesn't math the rule that "should start with PY_". This file undefine them.
 
-If you want to save the macro, use `#define DONOTUNDEF_macro_name` before include "Python_undef.h" to keep it.
+If you want to save the macro, use `#define {header}_DONOTUNDEF_macro_name` before include "Python_undef.h" to keep it.
+For example, this program on "pyconfig.h" needs `Py_DONOTUNDEF_macro_name`
 
 ### Generate for your project config.h (Add in version 1.1.0)
 
