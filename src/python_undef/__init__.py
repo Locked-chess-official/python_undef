@@ -111,7 +111,7 @@ def _generate_keep_code(macro_name: str, macro_need_header: str="Py"):
 
 def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=None, project_name: str="Python",
                                  main_header_macro: str="Py_PYTHON_H", main_header_name: str="Python.h", macro_need_header: str="Py",
-                                 is_standard_macro_rule: Callable[[str], bool]=_is_standard_python_macro, inside_project: bool=False):
+                                 is_standard_macro_rule: Callable[[str], bool]=_is_standard_python_macro, inside_project: bool=False) -> bool:
     """
     Generate the keep and undef header files based on your config.h.
 
@@ -306,8 +306,10 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
         print(f"\nUsage Notes:")
         print(
             (
-                f"  1. Include file \"{project_name}_undef.h\" and \"{project_name}_keep.h\" before including other library headers"
-                f", but \"{project_name}_undef.h\" must be after '<{main_header_name}>'."
+                "  1. The right include order is:\n"
+                f"      #include <{project_name}_keep.h>\n"
+                f"      #include <{main_header_name}>\n"
+                f"      #include <{project_name}_undef.h>"
             ) if not inside_project else
             (
                 f"  1. Include file \"{project_name}_keep.h\" just in \"{main_header_name}\" (just after define \"{main_header_macro}\") and "
@@ -323,63 +325,73 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
         return False
 
 def main():
+    import argparse
     import sysconfig
-    if sys.argv[1:]:
-        if sys.argv[1] in ('-h', '--help'):
-            print("""Usage:
-python -m python_undef --generate
-    Generate Python_undef.h based on the system's pyconfig.h to the include directly under the package directly.
-python -m python_undef --generate --output <path>
-    Generate Python_undef.h and specify output path.
-python -m python_undef --include
-    Print the include path where Python_undef.h is located.""")
-            sys.exit(0)
-        elif sys.argv[1] in ('--generate', "-g"):
-            include_dir = Path(sysconfig.get_path('include'))
-            pyconfig_path = include_dir / "pyconfig.h"
 
-            if os.path.exists(pyconfig_path):
-                if sys.argv[2:]:
-                    if sys.argv[2] == "--output" and len(sys.argv) == 4:
-                        if not os.path.isdir(sys.argv[3]):
-                            print("Error: Specified output path does not exist.", file=sys.stderr)
-                            sys.exit(1)
-                        output_path = sys.argv[3]
-                        print(f"Output path specified: {output_path}")
-                    else:
-                        print("Invalid output argument. Use --output <path> to specify output file.", file=sys.stderr)
-                        sys.exit(1)
-                else:
-                    output_path = None
-                success = generate_python_undef_header(str(pyconfig_path), output_path)
+    parser = argparse.ArgumentParser(
+        prog="python -m python_undef",
+        description="Generate or locate Python_keep/undef.h based on the system's pyconfig.h.",
+    )
 
-                if success:
-                    print(f"\n✅ Generation complete!")
-                    if output_path is None:
-                        print(f"💡 Tip: Use '{sys.executable} -m python_undef --include' to add this header file path to search path.")
-                    sys.exit(0)
-                else:
-                    print(f"\n❌ Generation failed!", file=sys.stderr)
-                    sys.exit(1)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument(
+        "-g", "--generate",
+        action="store_true",
+        help="Generate Python_keep/undef.h based on the system's pyconfig.h to the include directory under the package.",
+    )
+    group.add_argument(
+        "-i", "-I", "--include",
+        action="store_true",
+        help="Print the include path where Python_keep/undef.h is located.",
+    )
 
-            else:
-                print(f"File {pyconfig_path} not found.", file=sys.stderr)
-                print("Please ensure the python is standard installation with headers.", file=sys.stderr)
-                sys.exit(1)
-        elif sys.argv[1] in ("--include", "-i", "-I"):
-            file_dir = os.path.dirname(os.path.abspath(__file__))
-            if not (Path(file_dir) / "include" / "Python_undef.h").exists():
-                print(f"File not found. Use '{sys.executable} -m python_undef --generate' to generate the header first.", file=sys.stderr)
-                sys.exit(1)
-            include_path = os.path.abspath(os.path.join(file_dir, 'include'))
-            print(include_path)
+    parser.add_argument(
+        "-o", "--output",
+        metavar="<path>",
+        default=None,
+        help="Output directory for the generated Python_undef.h (only valid with --generate).",
+    )
+
+    args = parser.parse_args()
+
+    if args.generate:
+        if args.output is not None and not os.path.isdir(args.output):
+            parser.error("Specified output path does not exist.")
+
+        include_dir = Path(sysconfig.get_path("include"))
+        pyconfig_path = include_dir / "pyconfig.h"
+
+        if not os.path.exists(pyconfig_path):
+            print(f"File {pyconfig_path} not found.", file=sys.stderr)
+            print("Please ensure the python is standard installation with headers.", file=sys.stderr)
+            sys.exit(1)
+
+        success = generate_python_undef_header(str(pyconfig_path), args.output)
+
+        if success:
+            print("\n✅ Generation complete!")
+            if args.output is None:
+                print(
+                    f"💡 Tip: Use '{sys.executable} -m python_undef --include' "
+                    f"to add this header file path to search path."
+                )
             sys.exit(0)
         else:
-            print("Unknown argument. Use --help for usage information.", file=sys.stderr)
+            print("\n❌ Generation failed!", file=sys.stderr)
             sys.exit(1)
-    else:
-        print("No arguments provided. Use --help for usage information.", file=sys.stderr)
-        sys.exit(1)
+
+    elif args.include:
+        file_dir = os.path.dirname(os.path.abspath(__file__))
+        if not (Path(file_dir) / "include" / "Python_undef.h").exists():
+            print(
+                f"File not found. Use '{sys.executable} -m python_undef --generate' "
+                f"to generate the header first.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        include_path = os.path.abspath(os.path.join(file_dir, "include"))
+        print(include_path)
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

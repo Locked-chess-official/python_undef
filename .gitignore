@@ -9,4 +9,10 @@ uv.lock
 .venv/*
 *_keep.h
 *_undef.h
+
+# test fixtures (fake_project source headers) must stay tracked even though
+# generated *_keep.h / *_undef.h files are ignored by the patterns above.
+!tests/fake_project/fake_project.h
+!tests/fake_project/fake_config.h
+!tests/fake_project/fake_functions.h
 .vs
