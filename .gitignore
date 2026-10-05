@@ -16,3 +16,4 @@ uv.lock
 !tests/fake_project/fake_config.h
 !tests/fake_project/fake_functions.h
 .vs
+.vscode
