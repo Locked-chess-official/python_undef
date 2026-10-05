@@ -291,7 +291,7 @@ def generate_fake_project_headers(output_dir):
         str(FAKE_PROJECT_DIR / "fake_config.h"),
         output_path=str(output_dir),
         project_name="fake_project",
-        main_header_macro="FAKE_PROJECT_H",
+        main_header_macro="FP_FAKE_PROJECT_H",
         main_header_name="fake_project.h",
         macro_need_header="FP",
         is_standard_macro_rule=is_fp_standard,

@@ -14,6 +14,10 @@
 #ifndef FP_FAKE_FUNCTIONS_H
 #define FP_FAKE_FUNCTIONS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Target function that is always available. */
 int fp_always_available(void);
 
@@ -25,6 +29,10 @@ int fp_feature_a_enabled(void);
 #ifdef HAVE_FORK
 /* Target function gated by a *non-standard* HAVE_* config macro. */
 int fp_has_fork_support(void);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* FP_FAKE_FUNCTIONS_H */

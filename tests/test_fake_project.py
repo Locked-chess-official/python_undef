@@ -46,7 +46,7 @@ class TestFakeProjectGeneration(PythonHeadersTestCase):
 
     def test_fp_prefix_standard_rule(self):
         self.assertTrue(is_fp_standard("FP_ENABLE_FEATURE_A"))
-        self.assertTrue(is_fp_standard("FAKE_PROJECT_H"))
+        self.assertTrue(is_fp_standard("FP_FAKE_PROJECT_H"))
         self.assertFalse(is_fp_standard("HAVE_FORK"))
 
     def test_only_have_macros_are_undefed(self):
@@ -61,7 +61,7 @@ class TestFakeProjectGeneration(PythonHeadersTestCase):
             self.assertIn(m, keep)
         for m in ("FP_ENABLE_FEATURE_A", "FP_VERSION_MAJOR", "FP_BUFFER_SIZE"):
             self.assertNotIn(m, undef)
-        self.assertNotIn("FAKE_PROJECT_H", undef)
+        self.assertNotIn("FP_FAKE_PROJECT_H", undef)
 
     def test_inside_project_headers_have_no_order_guards(self):
         """inside_project=True drops the 'must be before/after Python.h' guards."""
