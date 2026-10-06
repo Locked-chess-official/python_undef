@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "python_undef"
-version = "1.4.2"
+version = "1.4.3"
 description = "Python keep header and undefined header in pyconfig.h"
 readme = "README.md"
 license = {text = "MIT"}
@@ -16,3 +16,6 @@ requires-python = ">=3.6"
 
 [project.urls]
 homepage = "https://github.com/Locked-chess-official/python_undef"
+
+[project.scripts]
+python-undef = "python_undef:main"

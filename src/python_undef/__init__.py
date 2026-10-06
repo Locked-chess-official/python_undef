@@ -6,6 +6,8 @@ Usage:
     This is the main command to generate Python_undef.h and Python_keep.h based on the system's pyconfig.h to the include directly under the package directly.
     python -m python_undef --generate --output <path>
     This command generates Python_undef.h and Python_keep.h and saves it to the specified output path.
+    python -m python_undef --generate -q
+    This command will generate the files without printing tips.
     python -m python_undef --include
     This command prints the include path where Python_undef.h is located.
     python -m python_undef --help
@@ -21,7 +23,8 @@ Usage:
         main_header_macro="MYPROJECT_H",
         main_header_name="myproject.h",
         macro_need_header="MYPROJECT",
-        is_standard_macro_rule=your_function
+        is_standard_macro_rule=your_function,
+        print_tips=False
     ):
         print("good")
     else:
@@ -35,6 +38,7 @@ import datetime
 import sys
 from pathlib import Path
 from typing import Callable
+import io
 
 _MACRO_WHITELIST = [
     "_W64",
@@ -111,7 +115,8 @@ def _generate_keep_code(macro_name: str, macro_need_header: str="Py"):
 
 def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=None, project_name: str="Python",
                                  main_header_macro: str="Py_PYTHON_H", main_header_name: str="Python.h", macro_need_header: str="Py",
-                                 is_standard_macro_rule: Callable[[str], bool]=_is_standard_python_macro, inside_project: bool=False) -> bool:
+                                 is_standard_macro_rule: Callable[[str], bool]=_is_standard_python_macro, inside_project: bool=False,
+                                 print_tips: bool=True) -> bool:
     """
     Generate the keep and undef header files based on your config.h.
 
@@ -124,7 +129,12 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
         macro_need_header: The macro that defines the header that needs to be included, defaults to "Py".
         is_standard_macro_rule: A function that determines whether a macro is standard, defaults to is_standard_python_macro.
         inside_project: Whether the code is inside the project, defaults to False.
+        print_tips: Whether to print tips, defaults to True.
     """
+    if not print_tips:
+        output_file = io.StringIO()
+    else:
+        output_file = sys.stdout
     if output_path is None:
         file_dir = os.path.dirname(os.path.abspath(__file__))
         include_dir = Path(file_dir) / 'include'
@@ -161,7 +171,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
     invalid_macros = []
 
     filename = os.path.basename(pyconfig_path)
-    print(f"Analyzing {filename}...")
+    print(f"Analyzing {filename}...", file=output_file)
 
     for i, line in enumerate(lines, 1):
         macro_name = _extract_macro_name(line)
@@ -170,7 +180,7 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
 
             if not is_standard_macro_rule(macro_name):
                 macros_to_undef.append(macro_name)
-                print(f"Line {i:4d}: Found non-standard macro '{macro_name}'")
+                print(f"Line {i:4d}: Found non-standard macro '{macro_name}'", file=output_file)
         else:
             # Check if line looks like a definition but has invalid name
             line = line.strip()
@@ -280,30 +290,30 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
             f.writelines(keep_selection)
             f.write(keep_footer)
 
-        print(f"\n{'='*60}")
-        print(f"Successfully generated: '{os.path.basename(undef_output_path)}' and '{os.path.basename(keep_output_path)}'")
-        print(f"{'='*60}")
-        print("Summary:")
-        print(f"  - Total valid macro definitions: {len(all_macros)}")
-        print(f"  - Macros to undefine: {len(macros_to_undef)}")
-        print(f"  - Preserved standard macros: {len(all_macros) - len(macros_to_undef)}")
-        print(f"  - Invalid macro names skipped: {len(invalid_macros)}")
+        print(f"\n{'='*60}", file=output_file)
+        print(f"Successfully generated: '{os.path.basename(undef_output_path)}' and '{os.path.basename(keep_output_path)}'", file=output_file)
+        print(f"{'='*60}", file=output_file)
+        print("Summary:", file=output_file)
+        print(f"  - Total valid macro definitions: {len(all_macros)}", file=output_file)
+        print(f"  - Macros to undefine: {len(macros_to_undef)}", file=output_file)
+        print(f"  - Preserved standard macros: {len(all_macros) - len(macros_to_undef)}", file=output_file)
+        print(f"  - Invalid macro names skipped: {len(invalid_macros)}", file=output_file)
 
         if invalid_macros:
-            print(f"\nSkipped invalid macro names:")
+            print(f"\nSkipped invalid macro names:", file=output_file)
             for line_num, invalid_macro in invalid_macros[:10]:  # show only first 10
-                print(f"  Line {line_num:4d}: '{invalid_macro}'")
+                print(f"  Line {line_num:4d}: '{invalid_macro}'", file=output_file)
             if len(invalid_macros) > 10:
-                print(f"  ... and {len(invalid_macros) - 10} more")
+                print(f"  ... and {len(invalid_macros) - 10} more", file=output_file)
 
         if macros_to_undef:
-            print(f"\nMacros to undefine (first 50):")
+            print(f"\nMacros to undefine (first 50):", file=output_file)
             for i, macro in enumerate(macros_to_undef[:50], 1):
-                print(f"  {i:3d}. {macro}")
+                print(f"  {i:3d}. {macro}", file=output_file)
             if len(macros_to_undef) > 50:
-                print(f"  ... and {len(macros_to_undef) - 50} more")
+                print(f"  ... and {len(macros_to_undef) - 50} more", file=output_file)
 
-        print(f"\nUsage Notes:")
+        print(f"\nUsage Notes:", file=output_file)
         print(
             (
                 "  1. The right include order is:\n"
@@ -314,10 +324,11 @@ def generate_python_undef_header(pyconfig_path: str, / ,output_path: str|None=No
             (
                 f"  1. Include file \"{project_name}_keep.h\" just in \"{main_header_name}\" (just after define \"{main_header_macro}\") and "
                 f"\"{project_name}_undef.h\" after including the other your project headers file (before the endif of \"{main_header_macro}\")."
-            )
+            ), file=output_file
         )
-        print(f"  2. Use {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_XXX to protect macros that must be kept its definition in \"{main_header_name}\".")
-        print(f"  3. Regenerate this file whenever rebuilding {project_name}.")
+        print(f"  2. Use {macro_need_header + "_" if macro_need_header else ""}DONOTUNDEF_XXX to protect macros that must be kept its definition in \"{main_header_name}\".",
+              file=output_file)
+        print(f"  3. Regenerate this file whenever rebuilding {project_name}.", file=output_file)
 
         return True
     except Exception as e:
@@ -352,6 +363,12 @@ def main():
         help="Output directory for the generated Python_undef.h (only valid with --generate).",
     )
 
+    parser.add_argument(
+        "-q", "--quiet",
+        action="store_true",
+        help="Suppress normal output (only valid with --generate).",
+    )
+
     args = parser.parse_args()
 
     if args.generate:
@@ -366,15 +383,16 @@ def main():
             print("Please ensure the python is standard installation with headers.", file=sys.stderr)
             sys.exit(1)
 
-        success = generate_python_undef_header(str(pyconfig_path), args.output)
+        success = generate_python_undef_header(str(pyconfig_path), args.output, print_tips=not args.quiet)
 
         if success:
-            print("\n✅ Generation complete!")
-            if args.output is None:
-                print(
-                    f"💡 Tip: Use '{sys.executable} -m python_undef --include' "
-                    f"to add this header file path to search path."
-                )
+            if not args.quiet:
+                print("\n✅ Generation complete!")
+                if args.output is None:
+                    print(
+                        f"💡 Tip: Use '{sys.executable} -m python_undef --include' "
+                        f"to add this header file path to search path."
+                    )
             sys.exit(0)
         else:
             print("\n❌ Generation failed!", file=sys.stderr)

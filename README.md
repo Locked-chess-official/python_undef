@@ -1,10 +1,10 @@
 # Python_undef
 
-This is a Python script that generates a header file "Python_undef.h" which undefine many macros in "pyconfig.h" that doesn't match the rule that "should start with PY_".
+This is a Python script that generates the header file "Python_undef.h" and "Python_keep.h" which undefine many macros in "pyconfig.h" that doesn't match the rule that "should start with PY_".
 
 ## Why
 
-The "pyconfig.h" continue many macros that doesn't math the rule that "should start with PY_" which may cause the comflict with the other projects. This project undefines them.
+The "pyconfig.h" defines many macros that doesn't math the rule that "should start with PY_" which may cause the comflict with the other projects. This project undefines them.
 
 ## Download
 
@@ -29,6 +29,12 @@ You can use the `--output` option to specify the output file:
 python -m python_undef --generate --output <path>
 ```
 
+If you don't want to see the long tips, you can use `-q` or `--quiet` option (add in 1.4.3):
+
+```bash
+python -m python_undef --generate -q
+```
+
 ### Include
 
 The command under will output the include path of "Python_undef.h" and "Python_keep.h":.
@@ -39,6 +45,22 @@ If hadn't run `python -m python_undef --generate` it will exit with code 1.
 
 ```bash
 python -m python_undef --include
+```
+
+### Command
+
+After 1.4.3, you can use `python-undef` as the command straightly:
+
+```bash
+python-undef --generate
+```
+
+```bash
+python-undef --generate --output <path>
+```
+
+```bash
+python-undef --include
 ```
 
 ### Using it in your code
@@ -71,7 +93,8 @@ if python_undef.generate_python_undef_header(
     main_header_name="your_project.h",
     macro_need_header="YOUR_PROJECT",
     is_standard_macro_rule=your_function,
-    inside_project=True # Add in version 1.2.0
+    inside_project=True,  # Add in version 1.2.0
+    print_tips=False  # Add in version 1.4.3
 ):
     print("Generate your_project_undef.h and your_project_keep.h success")
 else:

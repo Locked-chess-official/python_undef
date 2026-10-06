@@ -13,14 +13,14 @@ from unittest_helpers import PYCONFIG, non_standard_macros, python_undef, BaseTe
 class TestGenerate(BaseTestCase):
     def test_generate_produces_both_headers(self):
         out = self.make_tmpdir()
-        ok = python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out))
+        ok = python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out), print_tips=False)
         self.assertIs(ok, True)
         self.assertTrue((out / "Python_keep.h").exists())
         self.assertTrue((out / "Python_undef.h").exists())
 
     def test_generate_headers_are_nonempty(self):
         out = self.make_tmpdir()
-        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out))
+        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out), print_tips=False)
         keep = (out / "Python_keep.h").read_text(encoding="utf-8")
         undef = (out / "Python_undef.h").read_text(encoding="utf-8")
         self.assertGreater(len(keep), 0)
@@ -29,7 +29,7 @@ class TestGenerate(BaseTestCase):
     def test_keep_and_undef_cover_the_same_macros(self):
         """Every macro handled by the undef header must have a counterpart in keep."""
         out = self.make_tmpdir()
-        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out))
+        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out), print_tips=False)
         keep = (out / "Python_keep.h").read_text(encoding="utf-8")
         undef = (out / "Python_undef.h").read_text(encoding="utf-8")
 
@@ -42,13 +42,13 @@ class TestGenerate(BaseTestCase):
     def test_keep_must_be_included_before_python_h(self):
         """Python_keep.h carries a guard error if Python.h was already included."""
         out = self.make_tmpdir()
-        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out))
+        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out), print_tips=False)
         keep = (out / "Python_keep.h").read_text(encoding="utf-8")
         self.assertIn("must be included *before* Python.h", keep)
 
     def test_undef_must_be_included_after_python_h(self):
         out = self.make_tmpdir()
-        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out))
+        python_undef.generate_python_undef_header(str(PYCONFIG), output_path=str(out), print_tips=False)
         undef = (out / "Python_undef.h").read_text(encoding="utf-8")
         self.assertIn("must be included *after* Python.h", undef)
 

@@ -296,6 +296,7 @@ def generate_fake_project_headers(output_dir):
         macro_need_header="FP",
         is_standard_macro_rule=is_fp_standard,
         inside_project=True,
+        print_tips=False
     )
     if not ok:
         raise AssertionError("failed to generate fake_project keep/undef headers")
@@ -336,7 +337,7 @@ class PythonHeadersTestCase(BaseTestCase):
         cls.nonstd_macros = non_standard_macros()
         cls._gen_tmpdir = tempfile.mkdtemp(prefix="generated_python_headers_")
         ok = python_undef.generate_python_undef_header(
-            str(PYCONFIG), output_path=cls._gen_tmpdir
+            str(PYCONFIG), output_path=cls._gen_tmpdir, print_tips=False
         )
         if not ok:
             shutil.rmtree(cls._gen_tmpdir, ignore_errors=True)
